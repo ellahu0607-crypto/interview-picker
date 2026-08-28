@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>面試題隨機抽選器</title>
+  <style>
+    :root {
+      --primary-color: #2563eb;
+      --bg-color: #f8fafc;
+      --card-bg: #ffffff;
+      --text-color: #1e293b;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      padding: 2rem 1rem;
+      display: flex;
+      justify-content: center;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 650px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .card {
+      background-color: var(--card-bg);
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      border: 1px solid var(--border-color);
+    }
+
+    h1, h2 {
+      margin-bottom: 1rem;
+      font-size: 1.25rem;
+    }
+
+    /* 抽題區塊 */
+    .draw-section {
+      text-align: center;
+    }
+
+    .question-display {
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background-color: #f1f5f9;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 1.15rem;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #1d4ed8;
+    }
+
+    /* 輸入區塊 */
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--primary-color);
+    }
+
+    /* 題目列表 */
+    .list-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.75rem;
+    }
+
+    .question-list {
+      list-style: none;
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .question-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.75rem;
+      background-color: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 0.95rem;
+    }
+
+    .delete-btn {
+      background-color: #ef4444;
+      padding: 0.35rem 0.6rem;
+      font-size: 0.8rem;
+    }
+
+    .delete-btn:hover {
+      background-color: #dc2626;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card draw-section">
+      <h1>🎯 面試模擬抽選</h1>
+      <div class="question-display" id="displayBox">
+        點擊下方按鈕開始抽選題目！
+      </div>
+      <button onclick="drawQuestion()">🎲 隨機抽選一題</button>
+    </div>
+
+    <div class="card">
+      <h2>➕ 新增題目</h2>
+      <div class="input-group">
+        <input type="text" id="questionInput" placeholder="請輸入面試問題..." onkeypress="handleKeyPress(event)">
+        <button onclick="addQuestion()">新增</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="list-header">
+        <h2>📚 目前題庫 (<span id="count">0</span>)</h2>
+      </div>
+      <ul class="question-list" id="questionList"></ul>
+    </div>
+  </div>
+
+  <script>
+    // 預設題目（若 LocalStorage 無資料時使用）
+    const defaultQuestions = [
+      "請做一個 1 分鐘的自我介紹。",
+      "分享一次你在專案中遇到最大的挑戰，以及你如何解決它？",
+      "你的優點與缺點分別是什麼？",
+      "為什麼想應徵我們公司／這個職位？"
+    ];
+
+    // 初始化讀取資料
+    let questions = JSON.parse(localStorage.getItem('interview_questions')) || defaultQuestions;
+
+    function saveQuestions() {
+      localStorage.setItem('interview_questions', JSON.stringify(questions));
+      renderList();
+    }
+
+    function renderList() {
+      const listElement = document.getElementById('questionList');
+      const countElement = document.getElementById('count');
+      
+      listElement.innerHTML = '';
+      countElement.innerText = questions.length;
+
+      questions.forEach((q, index) => {
+        const li = document.createElement('li');
+        li.className = 'question-item';
+        li.innerHTML = `
+          <span>${index + 1}. ${escapeHtml(q)}</span>
+          <button class="delete-btn" onclick="deleteQuestion(${index})">刪除</button>
+        `;
+        listElement.appendChild(li);
+      });
+    }
+
+    function addQuestion() {
+      const input = document.getElementById('questionInput');
+      const text = input.value.trim();
+      
+      if (!text) return;
+
+      questions.push(text);
+      saveQuestions();
+      input.value = '';
+    }
+
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') {
+        addQuestion();
+      }
+    }
+
+    function deleteQuestion(index) {
+      questions.splice(index, 1);
+      saveQuestions();
+    }
+
+    function drawQuestion() {
+      const displayBox = document.getElementById('displayBox');
+      
+      if (questions.length === 0) {
+        displayBox.innerText = '題庫目前是空的，請先新增題目！';
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * questions.length);
+      displayBox.innerText = questions[randomIndex];
+    }
+
+    // 防止 XSS 的簡易字元跳脫
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.innerText = text;
+      return div.innerHTML;
+    }
+
+    // 初始渲染
+    renderList();
+  </script>
+</body>
+</html>
